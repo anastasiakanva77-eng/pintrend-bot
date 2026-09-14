@@ -3,6 +3,7 @@ import re
 import json
 import sqlite3
 import secrets
+import asyncio
 from pathlib import Path
 
 import httpx
@@ -390,7 +391,6 @@ async def max_request(
     }
 
     if payload is not None:
-
         headers[
             "Content-Type"
         ] = "application/json"
@@ -407,13 +407,19 @@ async def max_request(
             json=payload,
         )
 
+        if r.status_code >= 400:
+            print(
+                f"MAX {method} {path} error {r.status_code}: {r.text}",
+                flush=True,
+            )
+
         r.raise_for_status()
 
         return r.json()
 
 
 async def connect_max_webhook():
-
+    
     if not MAX_TOKEN:
         return False, "Не задан MAX_BOT_TOKEN"
 
@@ -515,39 +521,58 @@ async def max_send_product(
     row: dict
 ):
 
-    attachments = [
-        {
-            "type": "image",
-            "payload": {
-                "url": url
-            }
-        }
-        for url in public_image_urls(row)[:10]
-    ]
+    image_urls = public_image_urls(row)[:10]
 
-    attachments.append(
-        {
-            "type": "inline_keyboard",
-            "payload": {
-                "buttons": [
-                    [
+    for url in image_urls:
+
+        try:
+            await max_request(
+                "POST",
+                "/messages",
+                params={
+                    "user_id": user_id
+                },
+                payload={
+                    "attachments": [
                         {
-                            "type": "link",
-                            "text": "Посмотреть товар на WB",
-                            "url": row["wb_url"],
+                            "type": "image",
+                            "payload": {
+                                "url": url
+                            }
                         }
-                    ],
-                    [
-                        {
-                            "type": "callback",
-                            "text": "Ввести другой артикул",
-                            "payload": "another_article",
-                        }
-                    ],
-                ]
-            },
-        }
-    )
+                    ]
+                },
+            )
+
+        except Exception as e:
+            print(
+                f"MAX image send error: {url} - {e}",
+                flush=True,
+            )
+
+        await asyncio.sleep(0.6)
+
+    keyboard = {
+        "type": "inline_keyboard",
+        "payload": {
+            "buttons": [
+                [
+                    {
+                        "type": "link",
+                        "text": "Посмотреть товар на WB",
+                        "url": row["wb_url"],
+                    }
+                ],
+                [
+                    {
+                        "type": "callback",
+                        "text": "Ввести другой артикул",
+                        "payload": "another_article",
+                    }
+                ],
+            ]
+        },
+    }
 
     await max_request(
         "POST",
@@ -561,12 +586,12 @@ async def max_send_product(
                 f"{row['title']}\n\n"
                 "Вот готовые образы с ним."
             ),
-            "attachments": attachments,
+            "attachments": [
+                keyboard
+            ],
         },
     )
-
-
-async def max_not_found(user_id: int):
+    async def max_not_found(user_id: int):
 
     await max_send_text(
         user_id,
