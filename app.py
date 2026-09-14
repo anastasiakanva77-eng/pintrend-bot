@@ -591,7 +591,7 @@ async def max_send_product(
             ],
         },
     )
-    async def max_not_found(user_id: int):
+async def max_not_found(user_id: int):
 
     await max_send_text(
         user_id,
