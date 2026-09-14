@@ -294,20 +294,17 @@ async def tg_send_product(
         )
 
     elif len(images) >= 2:
-
-        await tg_call(
-            "sendMediaGroup",
-            {
-                "chat_id": chat_id,
-                "media": [
-                    {
-                        "type": "photo",
-                        "media": url
-                    }
-                    for url in images
-                ],
-            }
-        )
+    for url in images:
+        try:
+            await tg_call(
+                "sendPhoto",
+                {
+                    "chat_id": chat_id,
+                    "photo": url,
+                }
+            )
+        except Exception as e:
+            print(f"Telegram photo send error: {e}")
 
     keyboard = {
         "inline_keyboard": [
