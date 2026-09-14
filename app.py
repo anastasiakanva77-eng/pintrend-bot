@@ -216,6 +216,12 @@ async def tg_call(method: str, payload: dict):
             json=payload
         )
 
+        if r.status_code >= 400:
+            print(
+                f"Telegram {method} error {r.status_code}: {r.text}",
+                flush=True,
+            )
+
         r.raise_for_status()
 
         return r.json()
