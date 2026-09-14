@@ -287,32 +287,45 @@ async def tg_send_product(
     row: dict
 ):
 
-    images = public_image_urls(row)[:10]
+        image_names = json.loads(row["images_json"] or "[]")[:10]
 
-    if len(images) == 1:
+    async with httpx.AsyncClient(timeout=40) as client:
+        for name in image_names:
+            path = MEDIA_DIR / name
 
-        await tg_call(
-            "sendPhoto",
-            {
-                "chat_id": chat_id,
-                "photo": images[0],
-            }
-        )
-
-    elif len(images) >= 2:
-        for url in images:
-            try:
-                await tg_call(
-                    "sendPhoto",
-                    {
-                        "chat_id": chat_id,
-                        "photo": url,
-                    }
+            if not path.exists():
+                print(
+                    f"Telegram photo missing: {path}",
+                    flush=True,
                 )
-            except Exception as e:
-                print(f"Telegram photo send error: {e}")
+                continue
 
-    keyboard = {
+            try:
+                with path.open("rb") as photo_file:
+                    r = await client.post(
+                        f"{TG_API}/sendPhoto",
+                        data={"chat_id": str(chat_id)},
+                        files={
+                            "photo": (
+                                path.name,
+                                photo_file,
+                            )
+                        },
+                    )
+
+                if r.status_code >= 400:
+                    print(
+                        f"Telegram sendPhoto file error {r.status_code}: {r.text}",
+                        flush=True,
+                    )
+
+                r.raise_for_status()
+
+            except Exception as e:
+                print(
+                    f"Telegram photo send error: {e}",
+                    flush=True,
+                )
         "inline_keyboard": [
             [
                 {
