@@ -287,7 +287,7 @@ async def tg_send_product(
     row: dict
 ):
 
-        image_names = json.loads(row["images_json"] or "[]")[:10]
+    image_names = json.loads(row["images_json"] or "[]")[:10]
 
     async with httpx.AsyncClient(timeout=40) as client:
         for name in image_names:
@@ -326,6 +326,8 @@ async def tg_send_product(
                     f"Telegram photo send error: {e}",
                     flush=True,
                 )
+
+    keyboard = {
         "inline_keyboard": [
             [
                 {
@@ -354,7 +356,6 @@ async def tg_send_product(
             "reply_markup": keyboard,
         }
     )
-
 
 async def tg_not_found(chat_id: int):
 
