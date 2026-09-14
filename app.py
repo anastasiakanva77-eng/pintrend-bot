@@ -293,7 +293,7 @@ async def tg_send_product(
             }
         )
 
-        elif len(images) >= 2:
+    elif len(images) >= 2:
         for url in images:
             try:
                 await tg_call(
